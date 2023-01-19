@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+  <style>
+    /* General styling */
+    body {
+      background-color: #f2f2f2;
+      font-family: Arial, sans-serif;
+    }
+    
+    /* Chatbox styling */
+    #chatbox {
+      background-color: white;
+      width: 80%;
+      height: 80%;
+      overflow-y: scroll;
+      margin: 20px auto;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 2px 2px 10px #888888;
+    }
+    
+    /* Input styling */
+    #chatinput {
+      width: 80%;
+      padding: 10px;
+      font-size: 18px;
+      margin: 10px auto;
+      border-radius: 10px;
+      border: none;
+      box-shadow: 2px 2px 10px #888888;
+      text-align: center;
+    }
+    
+    /* Submit button styling */
+    button {
+      background-color: #2f5831;
+      color: white;
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      cursor: pointer;
+      margin: 10px auto;
+      width: 80%;
+      border-radius: 10px;
+      box-shadow: 2px 2px 10px #888888;
+    }
+  </style>
+</head>
+<body>
+<script>
+
+function captureAndUploadAudio() {
+  // Check for browser support
+  navigator.mediaDevices = navigator.mediaDevices || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+  // Get access to the user's microphone
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+      // Create a new instance of the AudioContext object
+      const audioContext = new AudioContext();
+
+      // Create a MediaStreamAudioSourceNode
+      const source = audioContext.createMediaStreamSource(stream);
+
+      // Create a ScriptProcessorNode
+      const processor = audioContext.createScriptProcessor(1024, 1, 1);
+
+      // Connect the nodes
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+
+      // Wait for audio data to be processed
+      processor.onaudioprocess = function(event) {
+        // Get the raw audio data
+        const audioData = event.inputBuffer.getChannelData(0);
+
+        // Convert the audio data to a blob
+        const audioBlob = new Blob([audioData], { type: 'audio/wav' });
+
+        // Send the audio data to a remote server
+        fetch("/audiox", {
+          method: "POST",
+          body: audioBlob
+        });
+      };
+    })
+    .catch(error => {
+      console.error(error);
+    });
+}
+
+</script>
+
+  <h1>Audio Capturing Example</h1>
+  <p>Speak into your microphone to begin capturing audio.</p>
+  <div id="chatbox">
+  </div>
+  <form>
+    <input type="text" id="chatinput" placeholder="Enter your message here"></input>
+    <button type="submit">Send</button>
+    <button type="audio">Record</button>
+  </form>
+  <script>
+    function submitChat() {
+      let chatinput = document.getElementById("chatinput").value;
+      document.getElementById("chatinput").value = "";
+      let chatbox = document.getElementById("chatbox");
+      let newMessage = document.createElement("div");
+      newMessage.innerHTML = chatinput;
+      chatbox.appendChild(newMessage);
+    }
+  </script>
+
+</body>
+</html>
