@@ -1,0 +1,5 @@
+proxy
+.venv
+__pycache__
+/deps
+tts-sa-key.json

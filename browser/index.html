@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html>
-<head>
 
+<head>
   <style>
-    /* General styling */
     body {
       background-color: #f2f2f2;
       font-family: Arial, sans-serif;
     }
-    
-    /* Chatbox styling */
+
     #chatbox {
       background-color: white;
       width: 80%;
@@ -19,21 +17,20 @@
       padding: 10px;
       border-radius: 10px;
       box-shadow: 2px 2px 10px #888888;
+      min-height: 15em;
     }
-    
-    /* Input styling */
+
     #chatinput {
       width: 80%;
       padding: 10px;
       font-size: 18px;
-      margin: 10px auto;
+      margin: 20px auto;
       border-radius: 10px;
       border: none;
       box-shadow: 2px 2px 10px #888888;
       text-align: center;
     }
-    
-    /* Submit button styling */
+
     button {
       background-color: #2f5831;
       color: white;
@@ -46,72 +43,235 @@
       border-radius: 10px;
       box-shadow: 2px 2px 10px #888888;
     }
+
+    #controls {
+      margin: 20px auto;
+      width: 60%;
+    }
+
+    button.audio-control{
+      margin: 10px auto;
+      width: 100%;
+    }
+
+    div.chat-input {
+      margin: auto;
+      width: 80%;
+    }
+
+    input#chatinput {
+      width: 100%;
+    }
+
   </style>
 </head>
+
 <body>
-<script>
 
-function captureAndUploadAudio() {
-  // Check for browser support
-  navigator.mediaDevices = navigator.mediaDevices || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
-
-  // Get access to the user's microphone
-  navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(stream => {
-      // Create a new instance of the AudioContext object
-      const audioContext = new AudioContext();
-
-      // Create a MediaStreamAudioSourceNode
-      const source = audioContext.createMediaStreamSource(stream);
-
-      // Create a ScriptProcessorNode
-      const processor = audioContext.createScriptProcessor(1024, 1, 1);
-
-      // Connect the nodes
-      source.connect(processor);
-      processor.connect(audioContext.destination);
-
-      // Wait for audio data to be processed
-      processor.onaudioprocess = function(event) {
-        // Get the raw audio data
-        const audioData = event.inputBuffer.getChannelData(0);
-
-        // Convert the audio data to a blob
-        const audioBlob = new Blob([audioData], { type: 'audio/wav' });
-
-        // Send the audio data to a remote server
-        fetch("/audiox", {
-          method: "POST",
-          body: audioBlob
-        });
-      };
-    })
-    .catch(error => {
-      console.error(error);
-    });
-}
-
-</script>
-
-  <h1>Audio Capturing Example</h1>
-  <p>Speak into your microphone to begin capturing audio.</p>
   <div id="chatbox">
   </div>
+
+  <div class="chat-input">
   <form>
-    <input type="text" id="chatinput" placeholder="Enter your message here"></input>
-    <button type="submit">Send</button>
-    <button type="audio">Record</button>
+    <input type="text" id="chatinput" placeholder="What do you want to learn?"></input>
   </form>
-  <script>
-    function submitChat() {
-      let chatinput = document.getElementById("chatinput").value;
-      document.getElementById("chatinput").value = "";
-      let chatbox = document.getElementById("chatbox");
-      let newMessage = document.createElement("div");
-      newMessage.innerHTML = chatinput;
-      chatbox.appendChild(newMessage);
+  </div>
+
+  <div id="controls">
+    <button class=audio-control id="record-button">Record</button>
+    <button class=audio-control id="pause-button" disabled>Pause</button>
+    <button class=audio-control id="done-button" disabled>Send</button>
+  </div>
+  <div id="formats">Format: start recording to see sample rate</div>
+  <p><strong>Recordings:</strong></p>
+  <ol id="recordingsList"></ol>
+
+
+
+  <script src="/browser/recorder.js"></script>
+
+  <script type="module">
+    import { html, render, Component } from './browser/preact-htm.js'
+    //import { html, render } from 'https://unpkg.com/htm/preact/standalone.module.js'
+
+    let chatbox = document.getElementById("chatbox");
+    let messages = [];
+
+    const ChatMessage = ({ message }) => html`
+      <div class="chat-message">
+        <audio controls src="${message.student.audio_path}" />
+        <div class="message">${message.student.text}</div>
+        <audio controls src="${message.teacher.audio_path}" />
+        <div class="message">${message.teacher.text}</div>
+      </div>
+    `;
+
+    const ChatAudio = ({ audio_path }) => html`
+      <div class="chat-audio">
+        <audio controls src="${audio_path}" type="audio/wav"></audio>
+      </div>
+    `;
+
+    const ChatLog = ({ messages }) => html`
+      <div class="chat-log">
+        ${messages.map(message => html`<${ChatMessage} message=${message} />`)}
+      </div>
+    `;
+
+    const renderChat = () => {
+      render(html`<${ChatLog} messages=${messages} />`, chatbox);
     }
+
+    let chatInput = document.getElementById("chatinput");
+    chatInput.addEventListener('keypress', (e) => {
+      e.preventDefault();
+      if (e.key === 'Enter') {
+        console.log('submitting', e);
+        let message = chatInput.value;
+        console.log(message);
+        messages.push(message);
+        renderChat();
+        chatInput.value = '';
+      } else {
+        chatInput.value = chatInput.value + e.key;
+      }
+    });
+
+    let gumStream;  //stream from getUserMedia()
+    let rec;        // Recorder.js object
+    let audioInput;      // MediaStreamAudioSourceNode we'll be recording
+
+    let AudioContext = window.AudioContext;
+    let audioContext;
+
+    let recordButton = document.getElementById("record-button");
+    let pauseButton = document.getElementById("pause-button");
+    let stopButton = document.getElementById("done-button");
+
+    //add events to those 2 buttons
+    recordButton.addEventListener("click", startRecording);
+    stopButton.addEventListener("click", stopRecording);
+    pauseButton.addEventListener("click", pauseRecording);
+
+    function startRecording() {
+      let constraints = { audio: true, video: false }
+
+      // Disable the record button until we get a success or fail from getUserMedia() 
+      recordButton.disabled = true;
+      stopButton.disabled = false;
+      pauseButton.disabled = false
+
+      // https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
+
+      navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
+        console.log("getUserMedia() success, stream created, initializing Recorder.js ...");
+
+        // create an audio context after getUserMedia is called
+        // sampleRate might change after getUserMedia is called, like it does on macOS when recording through AirPods
+        // the sampleRate defaults to the one set in your OS for your playback device
+
+        audioContext = new AudioContext();
+
+        //update the format 
+        document.getElementById("formats").innerHTML = "Format: 1 channel pcm @ " + audioContext.sampleRate / 1000 + "kHz"
+
+        /*  assign to gumStream for later use  */
+        gumStream = stream;
+
+        /* use the stream */
+        audioInput = audioContext.createMediaStreamSource(stream);
+
+        // Create the Recorder object and configure to record mono sound (1 channel)
+        // Recording 2 channels  will double the file size
+        rec = new Recorder(audioInput, { numChannels: 1 })
+
+        //start the recording process
+        rec.record()
+
+      }).catch(function (err) {
+        // enable the record button if getUserMedia() fails
+        recordButton.disabled = false;
+        stopButton.disabled = true;
+        pauseButton.disabled = true
+      });
+    }
+
+    function pauseRecording() {
+      // console.log("pauseButton clicked rec.recording=",rec.recording );
+      if (rec.recording) {
+        //pause
+        rec.stop();
+        pauseButton.innerHTML = "Resume";
+      } else {
+        //resume
+        rec.record()
+        pauseButton.innerHTML = "Pause";
+      }
+    }
+
+    function stopRecording() {
+
+      //disable the stop button, enable the record too allow for new recordings
+      stopButton.disabled = true;
+      recordButton.disabled = false;
+      pauseButton.disabled = true;
+
+      //reset button just in case the recording is stopped while paused
+      pauseButton.innerHTML = "Pause";
+
+      //tell the recorder to stop the recording
+      rec.stop();
+
+      //stop microphone access
+      gumStream.getAudioTracks()[0].stop();
+
+      //create the wav blob and pass it on to createDownloadLink
+      rec.exportWAV(sendSpeech);
+    }
+
+    function sendSpeech(blob) {
+
+      let url = URL.createObjectURL(blob);
+      let au = document.createElement('audio');
+      let li = document.createElement('li');
+      let link = document.createElement('a');
+
+      //name of .wav file to use during upload and download (without extension)
+      let filename = new Date().toISOString();
+
+      //add controls to the <audio> element
+      au.controls = true;
+      au.src = url;
+
+      //save to disk link
+      link.href = url;
+      link.download = filename + ".wav"; //download forces the browser to donwload the file using the  filename
+      link.innerHTML = "Save to disk";
+
+      li.appendChild(au);
+      li.appendChild(document.createTextNode(filename + ".wav "))
+      li.appendChild(link);
+
+      let xhr = new XMLHttpRequest();
+      xhr.onload = function (e) {
+        if (this.readyState === 4) {
+          const response = JSON.parse(e.target.responseText);
+          messages.push(response)
+          renderChat();
+          console.log("Server returned: ", JSON.parse(e.target.responseText));
+        }
+      };
+      let fd = new FormData();
+      fd.append("audio", blob, filename);
+      xhr.open("POST", "/audiox", true);
+      xhr.send(fd);
+
+      //add the li element to the ol
+      recordingsList.appendChild(li);
+    }
+
   </script>
 
 </body>
+
 </html>
