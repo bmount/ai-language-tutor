@@ -1,11 +1,11 @@
 
+import secrets
 from flask import Flask, render_template, request, session, jsonify, g
-from conversation import Conversation
 
+from conversation import Conversation
 from audio_to_text import *
 from config import AUDIO_DIR
 
-import secrets
 
 app = Flask(__name__, template_folder="./browser")
 app.secret_key = 'super secret key'
