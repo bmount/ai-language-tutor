@@ -102,7 +102,7 @@
       <div class="chat-message">
         <audio controls src="${message.student.audio_path}" />
         <div class="message">${message.student.text}</div>
-        <audio autoplay controls src="${message.teacher.audio_path}" />
+        <audio controls src="${message.teacher.audio_path}" />
         <div class="message">${message.teacher.text}</div>
       </div>
     `;
@@ -120,10 +120,11 @@
     `;
 
     const renderChat = () => {
+      console.log('renderchat clalled')
       render(html`<${ChatLog} messages=${messages} />`, chatbox);
-      messages = document.querySelectorAll('.message');
-      if (messages.length > 2) {
-        messages[messages.length - 1].scrollIntoView();
+      const entries = document.querySelectorAll('.message');
+      if (entries.length > 2) {
+        entries[entries.length - 1].scrollIntoView();
       }
     }
 
