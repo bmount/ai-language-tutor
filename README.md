@@ -4,6 +4,13 @@ This is an application for interactive language learning. It's something [I've](
 wanted for a while, especially since my free time to learn languages does not have any time zone overlap with any
 available instructors in Europe.
 
+The main idea is to be a conversation partner who is able to make corrections and explain things.
+Here is what it looks like so far:
+
+[![AI Language Tutor interaction]
+(https://img.youtube.com/vi/WA_udR-xoVE/maxresdefault.jpg)]
+(https://www.youtube.com/watch?v=WA_udR-xoVE)
+
 ## Setup
 
 We rely on 2 external services that require authentication (and likely a modest payment):
