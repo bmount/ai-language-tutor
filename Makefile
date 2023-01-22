@@ -3,7 +3,7 @@
 
 serve: proxy python tts-sa-key.json
 	. set-auth.sh && ./proxy &
-	. set-auth.sh && ./.venv/bin/flask --app web.py:app run --reload
+	. set-auth.sh && ./.venv/bin/flask --app web.py:app run --reload --port 5001
 
 help:
 	@echo Available targets are "python", "run", "proxy"
