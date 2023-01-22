@@ -7,9 +7,7 @@ available instructors in Europe.
 The main idea is to be a conversation partner who is able to make corrections and explain things.
 Here is what it looks like so far:
 
-[![AI Language Tutor interaction]
-(https://img.youtube.com/vi/WA_udR-xoVE/maxresdefault.jpg)]
-(https://www.youtube.com/watch?v=WA_udR-xoVE)
+[![AI Language Tutor interaction](https://img.youtube.com/vi/WA_udR-xoVE/maxresdefault.jpg)](https://www.youtube.com/watch?v=WA_udR-xoVE)
 
 ## Setup
 
