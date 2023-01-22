@@ -5,7 +5,7 @@ wanted for a while, especially since my free time to learn languages does not ha
 available instructors in Europe.
 
 The main idea is to be a conversation partner who is able to make corrections and explain things.
-Here is what it looks like so far:
+Here is what it looks like so far (click through for video):
 
 [![AI Language Tutor interaction](https://img.youtube.com/vi/WA_udR-xoVE/maxresdefault.jpg)](https://www.youtube.com/watch?v=WA_udR-xoVE)
 
