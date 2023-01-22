@@ -35,7 +35,7 @@
     button {
       background-color: #2f5831;
       color: white;
-      padding: 10px 20px;
+      padding: 10px;
       font-size: 18px;
       border: none;
       cursor: pointer;
@@ -102,7 +102,7 @@
       <div class="chat-message">
         <audio controls src="${message.student.audio_path}" />
         <div class="message">${message.student.text}</div>
-        <audio controls src="${message.teacher.audio_path}" />
+        <audio autoplay controls src="${message.teacher.audio_path}" />
         <div class="message">${message.teacher.text}</div>
       </div>
     `;

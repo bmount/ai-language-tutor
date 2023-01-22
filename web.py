@@ -13,6 +13,9 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 conversations = {}
 
+transcribe_model = BananaTranscriber()
+#transcribe_model = WhisperTranscriber("base")
+
 @app.before_request
 def before_request():
     if not session.get('user'):
@@ -28,19 +31,22 @@ def handle_audio_upload():
         audio_file = request.files['audio']
         pathname = os.path.join(AUDIO_DIR, f"{secrets.token_hex(32)}.wav")
         audio_file.save(pathname)
-        results = model.transcribe(pathname)
+        results = transcribe_model.transcribe(pathname)
         results['audio_path'] = pathname
         if not conversations.get(session['user']):
             userid = session['user']
-            conversation = Conversation.make_default()
+            conversation = Conversation.make_empty()
             conversations[userid] = conversation
             teacher_text, teacher_audio = conversation.start(results.get('text'))
-            response_text = teacher_text['choices'][0]['text']
         else:
             conversation = conversations.get(session['user'])
             teacher_text, teacher_audio = conversation.say(results.get('text'))
-            response_text = teacher_text['choices'][0]['text']
+        response_text = teacher_text
         return jsonify(dict(student=results, teacher=dict(text=response_text, audio_path=teacher_audio)))
+    else:
+        # figure out the context from utterance
+        # Todo handle typed input
+        pass
     return 'No audio file found in the request.'
 
 if __name__ == '__main__':

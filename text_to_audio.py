@@ -41,10 +41,21 @@ def list_voices(language_code=None):
         print(f"{languages:<8} | {name:<24} | {gender:<8} | {rate:,} Hz")
     return voices
 
+def default_voice_name_for_language(language):
+    language = language.lower()
+    best = dict(
+        english="en-AU-Neural2-A",
+        italian="it-IT-Neural2-A",
+        french="fr-CA-Neural2-A",
+        german="de-DE-Neural2-D",
+        spanish="es-US-Neural2-A",
+        japanese="ja-JP-Neural2-B",
+    )
+    return best.get(language, 'en-AU-Neural2-A')
 
 
 def text_to_wav(voice_name: str, text: str):
-    language_code = "-".join(voice_name.split("-")[:2])
+    language_code = 'en-GB' if not voice_name else "-".join(voice_name.split("-")[:2])
     text_input = tts.SynthesisInput(text=text)
     voice_params = tts.VoiceSelectionParams(
         language_code=language_code, name=voice_name
