@@ -13,8 +13,8 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 conversations = {}
 
-transcribe_model = BananaTranscriber()
-#transcribe_model = WhisperTranscriber("base")
+#transcribe_model = BananaTranscriber()
+transcribe_model = WhisperTranscriber("base")
 
 @app.before_request
 def before_request():

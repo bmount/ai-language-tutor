@@ -17,7 +17,7 @@ class Transcriber(ABC):
 
 class WhisperTranscriber(Transcriber):
     def __init__(self, model="base"):
-        self.model = whisper.load(model)
+        self.model = whisper.load_model(model)
 
     def transcribe(self, audio_path: str):
         return self.model.transcribe(audio_path)

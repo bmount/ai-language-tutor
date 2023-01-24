@@ -3,3 +3,5 @@ proxy
 __pycache__
 /deps
 tts-sa-key.json
+*.swo
+*.swp
