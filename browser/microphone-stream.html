@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+    const relativeToWebSocketUrl = (url) => {
+        const { protocol, host } = window.location;
+        const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${wsProtocol}//${host}${url}`;
+    };
+
+    // Create a WebSocket connection
+    function createSocket(sampleRate) {
+        let socketUrl = `${relativeToWebSocketUrl('/audio')}?hz=${sampleRate}`;
+        const socket = new WebSocket(socketUrl);
+        socket.binaryType = 'arraybuffer';
+        return socket;
+    }
+
+    function createAudioExchange() {
+        // Create a button for sending live audio to the server via websockets.
+        const button = document.createElement('button');
+        button.textContent = 'Record';
+        let recording = false;
+        // When the button is clicked, start sending live audio to the server.
+        // Create a variale to store the microphone stream, outside of the button click handler
+        // such that user permissions can be requested once, and the stream can be used
+        // multiple times.
+        let stream = null;
+        let socket = null;
+        // When the button is clicked, start sending live audio to the server.
+        button.onclick = () => {
+            // either stopping or starting:
+            if (recording) {
+                // now completed recording
+                recording = false;
+                button.textContent = 'Record';
+                try {
+                    socket.close();
+                } catch (e) {
+                    console.log('socket already closed');
+                }
+                socket = null;
+                // Close the stream
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+                recording = false;
+                return;
+            }
+            // Now go for it:
+            recording = true;
+            button.textContent = 'Stop';
+            // If the stream is not defined, request user permissions for the microphone.
+            if (!stream) {
+                navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                    .then(s => {
+                        stream = s;
+                        let audioContext;
+                        try {
+                            audioContext = new AudioContext({ sampleRate: 16000 });
+                        } catch (e) {
+                            audioContext = new AudioContext();
+                            console.log('AudioContext sampleRate not supported, using default');
+                        }
+                        const microphone = audioContext.createMediaStreamSource(stream);
+                        let sampleRate = audioContext.sampleRate;
+                        socket = createSocket(sampleRate);
+                        // Create a new socket connection.
+                        // When the socket is open, start sending audio data.
+                        socket.onopen = () => {
+                            // Create an audio context.
+                            // Before sending data to the server, convert the audio data to 16-bit PCM.
+                            const audioSource16 = audioContext.createScriptProcessor(4096, 1, 1);
+                            microphone.connect(audioSource16);
+                            audioSource16.connect(audioContext.destination);
+                            audioSource16.onaudioprocess = function (e) {
+                                if (!recording) {
+                                    return;
+                                }
+                                var left = e.inputBuffer.getChannelData(0);
+                                var left16 = floatTo16BitPCM(left); // helper function below
+                                console.log('sending', left16.byteLength, 'bytes', left16);
+                                socket.send(left16);
+                            };
+                        };
+                        socket.onmessage = (event) => {
+                            console.log('received', event.data);
+                        };
+                    })
+                    .catch(error => {
+                        console.error('Error accessing microphone: ', error);
+                    });
+            }
+        };
+        return button;
+    }
+
+    window.onload = () => {
+        const audioExchange = createAudioExchange();
+        document.body.appendChild(audioExchange);
+    };
+
+    function convertFloat32ToInt16(buffer) {
+        let l = buffer.length;
+        let buf = new Int16Array(l / 3);
+
+        while (l--) {
+            if (l % 3 == 0) {
+                buf[l / 3] = buffer[l] * 0xFFFF;    //convert to 16 bit
+            }
+        }
+        return buf.buffer
+    }
+
+    function floatTo16BitPCM(input) {
+        out = new Int16Array(input.length);
+        for (let i = 0; i < input.length; i++) {
+            let s = Math.max(-1, Math.min(1, input[i]));
+            let value = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            out[i] = value;
+            //output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+        return out;
+    }
+
+</script>
